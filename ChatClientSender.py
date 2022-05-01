@@ -63,7 +63,7 @@ class fileHandler:
 
         print('updating', rem_max)
         removed = 0
-        keys = list(self.window.keys());
+        keys = list(self.window.keys())
         for k in keys:
             if k < rem_max:
                 self.window.pop(k)
@@ -246,7 +246,7 @@ class TCPsend:
 
 
 
-                self.socket.settimeout(5)
+                self.socket.settimeout(1)
                 #Recieving Phase Until Timeout
                 while True:
                     try:
