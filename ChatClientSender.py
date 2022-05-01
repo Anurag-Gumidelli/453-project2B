@@ -52,21 +52,23 @@ class fileHandler:
 
             self.offset += len(c)
     
+
     # returns the current bytes window
     def get(self):
         return self.window
     
-
+    
     # updates the byte window and 
     def update(self, rem_max):
 
         print('updating', rem_max)
         removed = 0
-        for k in self.window.keys():
+        keys = list(self.window.keys());
+        for k in keys:
             if k < rem_max:
                 self.window.pop(k)
                 removed += 1
-                
+
         print(removed, len(self.window))
 
         for _ in range(removed):
@@ -80,7 +82,6 @@ class fileHandler:
 
             self.offset += len(c)
 
-        print(self.window)
     
 
 
@@ -158,7 +159,7 @@ class TCPsend:
 
         self.handler = Handler()
         if(inputFile!=sys.stdin):
-            self.filehandler =  fileHandler(inputFile)
+            self.filehandler =  fileHandler(inputFile, win_size=4)
 
 
 
@@ -234,7 +235,7 @@ class TCPsend:
                 if(len(window) == 0):
                     break
 
-                for k  in sorted(window.keys()):
+                for k  in sorted(list(window.keys())):
                     #Sending my current window
                     print("Sending")
                     print(k)
@@ -245,25 +246,28 @@ class TCPsend:
 
 
 
-                self.socket.settimeout(1)
+                self.socket.settimeout(5)
                 #Recieving Phase Until Timeout
                 while True:
                     try:
                         recv_pkt = self.socket.recv(PKT_SIZE)
                         parsed = self.handler.parse_pkt(recv_pkt)
                         if parsed == -1 or parsed['status'] == 13:
+                            print('bad packet')
                             continue
                         else:
                             if max_ack < parsed['seq']:
-                                print("Updating max_ack")
-                                print(parsed['seq'])
+                                
                                 max_ack = parsed['seq']
-                                self.filehandler.update(max_ack)
+                                
                                 continue
 
-                    except:
+                    except Exception as e:
                         #If Timeout we update 
                         # self.filehandler.update(max_ack)
+                        self.filehandler.update(max_ack)
+                        print(e)
+
                         break
 
 

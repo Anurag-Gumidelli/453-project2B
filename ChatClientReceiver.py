@@ -147,6 +147,7 @@ class TCPrecv:
                         
                         if parsed == -1:
                             self.send(cor_pkt)
+                            print('bad packet')
                             continue
 
                         elif parsed['status'] == 5:
@@ -154,18 +155,18 @@ class TCPrecv:
 
                         elif parsed['status'] == 11:
                             break
+
                         else:
                             if parsed['seq'] != self.seq:
+                                print(parsed['seq'])
                                 self.send( self.handle.mk_pkt(b'', self.seq, 0, 10 ))
                                 continue
                             else:
                                 o_file.write(parsed['data'])
-                                print("Got")
-                                print(self.seq)
+                                
                                 self.seq += (parsed['length'])
-                                print("Asking for")
-                                print(self.seq)
                                 self.send( self.handle.mk_pkt(b'', self.seq ,self.ack, 0))
+                                print(self.seq)
 
 
     
