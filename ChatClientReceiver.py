@@ -159,9 +159,12 @@ class TCPrecv:
                                 self.send( self.handle.mk_pkt(b'', self.seq, 0, 10 ))
                                 continue
                             else:
-
                                 o_file.write(parsed['data'])
+                                print("Got")
+                                print(self.seq)
                                 self.seq += (parsed['length'])
+                                print("Asking for")
+                                print(self.seq)
                                 self.send( self.handle.mk_pkt(b'', self.seq ,self.ack, 0))
 
 

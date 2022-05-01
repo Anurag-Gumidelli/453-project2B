@@ -1,3 +1,4 @@
+from ast import While
 from socket import *
 import  sys
 import time
@@ -44,7 +45,7 @@ class fileHandler:
 
             c = self.reader.read(MAX_READ)
 
-            if c == '':
+            if c == b'':
                 break
 
             self.window[self.offset] = c
@@ -67,8 +68,9 @@ class fileHandler:
         
         for _ in range(removed):
             c = self.reader.read(MAX_READ)
-
-            if c == '':
+            print(c)
+            if len(c) == 0:
+                print("Read Everything")
                 break
 
             self.window[self.offset] = c
@@ -123,7 +125,7 @@ class Handler:
                             }
                 return parsed
             else:
-                return -1;
+                return -1
 
 class TCPsend:
 
@@ -149,6 +151,8 @@ class TCPsend:
         self.ack = 0
 
         self.handler = Handler()
+        if(inputFile!=sys.stdin):
+            self.filehandler =  fileHandler(inputFile)
 
 
 
@@ -211,39 +215,48 @@ class TCPsend:
 
     def send_file(self):
         si = os.path.getsize(self.input)
+        max_ack = 0; 
         print(si , self.input  , __name__, file=sys.stderr)
         if self.input != sys.stdin:
-            with file_chunks(self.input , MAX_READ) as chunks:
-                for chunk in chunks:
-                    
-                    c_len = len(chunk)
-                    # process the chunk
-                    c_pkt = self.handler.mk_pkt(chunk, self.seq, self.ack, 2)
-                    
-                    while True:
-                        self.send(c_pkt)
-
-                        try:
-                            recv_pkt = self.socket.recv(PKT_SIZE)
-                            parsed = self.handler.parse_pkt(recv_pkt)
-
-
-
-                            if parsed == -1 or parsed['status'] == 13:
-                                continue
-                            else:
-                                if self.seq + c_len == parsed['seq']:
-                                    self.timeout = 0.1
-                                    self.socket.settimeout(self.timeout)
-                                    self.seq += c_len
-                                    break
-
-                        except:
+            while True:
+                print("Sending Phase")
+                print(self.filehandler.get())
+                if(len(self.filehandler.get()) == 0):
+                    break
+                current_window = dict(sorted(self.filehandler.get().items()))
+                for seqnum, chunk in current_window.items():
+                    #Sending my current window
+                    print("Sending")
+                    print(seqnum)
+                    c_pkt = self.handler.mk_pkt(chunk, seqnum, self.ack, 2)
+                    self.send(c_pkt)
+                
+                self.socket.settimeout(1)
+                #Recieving Phase Until Timeout
+                while True:
+                    print("Recieving Phase")     
+                    try:
+                        recv_pkt = self.socket.recv(PKT_SIZE)
+                        parsed = self.handler.parse_pkt(recv_pkt)
+                        if parsed == -1 or parsed['status'] == 13:
                             continue
-                destroy_pkt = self.handler.mk_pkt(self.out.encode(), 0,0,11)
-                for i in range(20):
-                    
-                    self.send(destroy_pkt)
+                        else:
+                            if max_ack < parsed['seq']:
+                                print("Updating max_ack")
+                                print(parsed['seq'])
+                                self.filehandler.update(max_ack)
+                                max_ack = parsed['seq']
+                                continue
+
+                    except:
+                        #If Timeout we update 
+                        # self.filehandler.update(max_ack)
+                        break
+
+
+            destroy_pkt = self.handler.mk_pkt(self.out.encode(), 0,0,11)
+            for i in range(20):
+                self.send(destroy_pkt)
 
 
 
