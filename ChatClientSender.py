@@ -59,13 +59,16 @@ class fileHandler:
 
     # updates the byte window and 
     def update(self, rem_max):
-        removed = 0
 
+        print('updating', rem_max)
+        removed = 0
         for k in self.window.keys():
             if k < rem_max:
                 self.window.pop(k)
                 removed += 1
-        
+                
+        print(removed, len(self.window))
+
         for _ in range(removed):
             c = self.reader.read(MAX_READ)
             print(c)
@@ -76,6 +79,9 @@ class fileHandler:
             self.window[self.offset] = c
 
             self.offset += len(c)
+
+        print(self.window)
+    
 
 
 
@@ -217,24 +223,31 @@ class TCPsend:
         si = os.path.getsize(self.input)
         max_ack = 0; 
         print(si , self.input  , __name__, file=sys.stderr)
+
         if self.input != sys.stdin:
+
             while True:
+
                 print("Sending Phase")
-                print(self.filehandler.get())
-                if(len(self.filehandler.get()) == 0):
+                window = self.filehandler.get()
+                print("length", len(window))
+                if(len(window) == 0):
                     break
-                current_window = dict(sorted(self.filehandler.get().items()))
-                for seqnum, chunk in current_window.items():
+
+                for k  in sorted(window.keys()):
                     #Sending my current window
                     print("Sending")
-                    print(seqnum)
-                    c_pkt = self.handler.mk_pkt(chunk, seqnum, self.ack, 2)
+                    print(k)
+                    c_pkt = self.handler.mk_pkt(window[k], k, self.ack, 2)
                     self.send(c_pkt)
                 
+                print('start receive phase')
+
+
+
                 self.socket.settimeout(1)
                 #Recieving Phase Until Timeout
                 while True:
-                    print("Recieving Phase")     
                     try:
                         recv_pkt = self.socket.recv(PKT_SIZE)
                         parsed = self.handler.parse_pkt(recv_pkt)
@@ -244,8 +257,8 @@ class TCPsend:
                             if max_ack < parsed['seq']:
                                 print("Updating max_ack")
                                 print(parsed['seq'])
-                                self.filehandler.update(max_ack)
                                 max_ack = parsed['seq']
+                                self.filehandler.update(max_ack)
                                 continue
 
                     except:
