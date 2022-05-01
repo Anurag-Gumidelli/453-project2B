@@ -3,6 +3,8 @@ from socket import *
 import  sys
 import time
 
+from parso import parse
+
 PKT_SIZE = 2048
 
 
@@ -73,6 +75,7 @@ class TCPrecv:
         self.ack = 0
 
         self.handle = Handler()
+        self.buffer = dict()
 
 
 
@@ -158,13 +161,24 @@ class TCPrecv:
 
                         else:
                             if parsed['seq'] != self.seq:
+                                if parsed['seq'] > self.seq:
+                                    self.buffer[parsed['seq']] = (parsed['data'], parsed['length'])
                                 print(parsed['seq'])
                                 self.send( self.handle.mk_pkt(b'', self.seq, 0, 10 ))
                                 continue
                             else:
                                 o_file.write(parsed['data'])
-                                
                                 self.seq += (parsed['length'])
+                                while True:
+                                    if(self.seq in self.buffer):
+                                        data, leng = self.buffer[self.seq]
+                                        o_file.write(data)
+                                        self.buffer.pop(self.seq)
+                                        self.seq += leng
+                                        print("Buffer helped")
+                                    else:
+                                        break
+                                        
                                 self.send( self.handle.mk_pkt(b'', self.seq ,self.ack, 0))
                                 print(self.seq)
 
