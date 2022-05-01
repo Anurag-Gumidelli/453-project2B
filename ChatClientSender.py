@@ -1,27 +1,82 @@
 from socket import *
 import  sys
 import time
-from contextlib import contextmanager
 from hashlib import blake2b
 import os
+from tkinter.tix import MAX
+from xml.dom import NoModificationAllowedErr
 
 PKT_SIZE = 2048
-MAX_READ = 1950
+MAX_READ = 2000
 
 
-# chunked file reader
-@contextmanager
-def file_chunks(filename, chunk_size):
-    f = open(filename, 'rb')
-    try:
-        def gen():
-            b = f.read(chunk_size)
-            while b:
-                yield b
-                b = f.read(chunk_size)
-        yield gen()
-    finally:
-        f.close()
+# # chunked file reader
+# @contextmanager
+# def file_chunks(filename, chunk_size):
+#     f = open(filename, 'rb')
+#     try:
+#         def gen():
+#             b = f.read(chunk_size)
+#             while b:
+#                 yield b
+#                 b = f.read(chunk_size)
+#         yield gen()
+#     finally:
+#         f.close()
+
+class fileHandler:
+
+
+    def __init__(self, name, win_size=16):
+
+        self.winS = win_size
+
+        try:
+            self.reader = open(name, 'rb')
+        except:
+            print('fatal error @ file open', file=sys.stderr)
+
+        self.window = dict()
+
+
+        self.offset = 0
+        for _ in range(win_size):
+
+            c = self.reader.read(MAX_READ)
+
+            if c == '':
+                break
+
+            self.window[self.offset] = c
+
+            self.offset += len(c)
+    
+    # returns the current bytes window
+    def get(self):
+        return self.window
+    
+
+    # updates the byte window and 
+    def update(self, rem_max):
+        removed = 0
+
+        for k in self.window.keys():
+            if k < rem_max:
+                self.window.pop(k)
+                removed += 1
+        
+        for _ in range(removed):
+            c = self.reader.read(MAX_READ)
+
+            if c == '':
+                break
+
+            self.window[self.offset] = c
+
+            self.offset += len(c)
+
+
+
 
 
 
@@ -29,7 +84,7 @@ def file_chunks(filename, chunk_size):
 class Handler:
 
     # Header format:
-    # CHECKSUM(20 bytes) | SEQ_NUM(10 bytes) | ACK (10 byte) | LEN(10 bytes) | STATUS (1 byte)
+    # CHECKSUM(10 bytes) | SEQ_NUM(10 bytes) | ACK (10 byte) | LEN(10 bytes) | STATUS (1 byte)
     # DATA
 
     def mk_pkt(self, data, seq, ack, stat):

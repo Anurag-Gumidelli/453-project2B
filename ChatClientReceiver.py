@@ -1,7 +1,4 @@
-
-from ast import parse
-from hashlib import blake2b, sha1
-from hmac import digest_size
+from hashlib import blake2b
 from socket import *
 import  sys
 import time
@@ -12,7 +9,7 @@ PKT_SIZE = 2048
 class Handler:
 
     # Header format:
-    # CHECKSUM(20 bytes) | SEQ_NUM(10 bytes) | ACK (10 byte) | LEN(10 bytes) | STATUS (1 byte)
+    # CHECKSUM(10 bytes) | SEQ_NUM(10 bytes) | ACK (10 byte) | LEN(10 bytes) | STATUS (1 byte)
     # DATA
 
     def mk_pkt(self, data, seq, ack, stat):
